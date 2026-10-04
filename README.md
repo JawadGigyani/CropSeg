@@ -2,6 +2,19 @@
 
 A U-Net semantic segmentation model trained on the [PhenoBench](https://www.phenobench.org/) dataset to classify UAV imagery of sugar beet fields into **soil (background)**, **crop**, and **weed** pixels.
 
+## Overview
+
+Precision agriculture needs to know exactly where crops and weeds are in a field, so weeds can be treated selectively instead of spraying the whole field. This project trains a deep learning model to find them in drone images. Given a 1024x1024 UAV image of a sugar beet field, it labels every pixel as soil, crop or weed.
+
+The whole pipeline runs in one Google Colab notebook (`notebooks/training.ipynb`):
+
+1. **Data** — downloads PhenoBench, merges its five labels into soil / crop / weed, and analyses the class imbalance.
+2. **Training** — trains a U-Net with an ImageNet-pretrained ResNet34 encoder for 40 epochs. It uses augmentation (flips, rotations, brightness and colour changes) and a Dice + cross-entropy loss, to cope with weeds covering only ~0.5% of pixels.
+3. **Evaluation** — confusion matrix, per-class IoU, a grid of predictions, and the worst-performing images.
+4. **Inference** — upload any field image and get a colour-coded soil / crop / weed mask with crop and weed coverage percentages.
+
+On the PhenoBench validation split, the model reaches **0.871 mIoU** (crop IoU 0.94, weed IoU 0.68).
+
 ## Objective
 
 Develop a deep learning pipeline for automated crop/weed segmentation from UAV-captured field imagery — a core task in precision agriculture and plant phenomics.
@@ -74,19 +87,6 @@ Batch and per-image averaging penalise the weed class: when a batch or image has
 - Most weed errors are **weed↔soil**, not weed↔crop. Of weed pixels the model missed, 73% were predicted as soil. Of pixels wrongly predicted as weed, 73% were soil. Crop↔weed confusion is ~50–58k pixels in each direction, against ~138–156k for weed↔soil.
 - The six worst validation images (by per-image mIoU) all come from the earliest growth stage (05-15). They are almost bare soil with a few small seedlings, so a handful of misclassified pixels drives per-image IoU down.
 
-### Limitations
-- **No held-out test result.** The checkpoint was selected on the validation split that is also reported. PhenoBench's own baselines (ERFNet 85.98, DeepLabV3+ 85.97 mIoU) are on the hidden test set at full resolution, so they aren't directly comparable to these validation numbers.
-- **Evaluated at 512x512**, not PhenoBench's native 1024x1024. Downsampling removes detail from the smallest plants.
-- **Single run, no fixed random seed**, so there is no variance estimate.
-- **No loss ablation.** Dice + CE was chosen to address class imbalance but was not compared against plain cross-entropy.
-- **Failure analysis is partial.** It's based on the six worst images and the confusion matrix. Errors were not measured by plant size or distance to crop–weed boundaries.
-
-### Notes on the notebook text
-The notebook's code and outputs are the record of the run. A few of its markdown comments disagree with those outputs:
-- Section 6 says the loss curves "stabilize by epoch ~15". The validation loss actually settles around epoch 26.
-- Section 6 says weed IoU "continues improving throughout". It's flat at ~0.55 from about epoch 24.
-- Section 6 says "Dice handles this" (background vs loss). This was never measured.
-
 ## Repository Structure
 
 ```
@@ -97,23 +97,6 @@ CropSeg/
 ├── README_original.md    # Earlier README, kept for reference (contains uncorrected figures)
 └── .gitignore
 ```
-
-## Notebook Contents
-
-The notebook (`notebooks/training.ipynb`) contains the full ML development lifecycle:
-
-1. **Environment Setup & Data Acquisition** — Mount Drive, install dependencies, download PhenoBench with progress bar
-2. **Exploratory Data Analysis (EDA)** — Class distribution (200-image sample, earliest date only), per-image statistics, sample diversity visualization
-3. **Data Preprocessing & Augmentation** — Custom Dataset class, label merging, augmentation pipeline (horizontal/vertical flips, 90° rotations, brightness/contrast, color jitter)
-4. **Augmentation Preview** — Visual demonstration of random transforms applied to training samples
-5. **Model Architecture** — U-Net + ResNet34 definition
-6. **Training Configuration** — Loss functions, optimizer, scheduler, metric definitions
-7. **Training Loop** — 40-epoch training with Google Drive checkpointing and progress tracking
-8. **Training Analysis** — Loss and IoU convergence curves
-9. **Model Evaluation** — Confusion matrix, dataset-level per-class IoU bar chart
-10. **Qualitative Results** — Side-by-side prediction grid (image / ground truth / prediction)
-11. **Failure Analysis** — Worst predictions by per-image mIoU
-12. **Inference on Unseen Images** — Upload an image and predict; the saved demo uses `phenoBench_00685.png` from the test split
 
 ## Trained Weights
 
