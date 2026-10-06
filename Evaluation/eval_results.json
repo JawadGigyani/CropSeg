@@ -1,0 +1,272 @@
+{
+  "checkpoint": {
+    "epoch": 39,
+    "val_miou_batch_avg": 0.8224810558461848
+  },
+  "val_512": {
+    "miou": 0.8714094614519432,
+    "iou_soil": 0.9926167962457099,
+    "iou_crop": 0.9413614531881834,
+    "iou_weed": 0.6802501349219363,
+    "pixel_accuracy": 0.9928011029495476,
+    "confusion_matrix": [
+      [
+        181396352,
+        437663,
+        137576
+      ],
+      [
+        617519,
+        18667352,
+        49799
+      ],
+      [
+        156490,
+        57831,
+        854586
+      ]
+    ]
+  },
+  "val_1024": {
+    "miou": 0.8807788357625238,
+    "iou_soil": 0.993587454540125,
+    "iou_crop": 0.9487156953898327,
+    "iou_weed": 0.7000333573576139,
+    "pixel_accuracy": 0.9936817408843361,
+    "confusion_matrix": [
+      [
+        725892107,
+        1507933,
+        489267
+      ],
+      [
+        2117541,
+        75018669,
+        198444
+      ],
+      [
+        570117,
+        231333,
+        3475261
+      ]
+    ]
+  },
+  "per_date_1024": {
+    "05-15": {
+      "miou": 0.7959675374308111,
+      "iou_soil": 0.9963971241008074,
+      "iou_crop": 0.9064614427592308,
+      "iou_weed": 0.48504404543239493,
+      "pixel_accuracy": 0.9963648898858475,
+      "confusion_matrix": [
+        [
+          404565271,
+          461570,
+          87788
+        ],
+        [
+          715857,
+          11972201,
+          34881
+        ],
+        [
+          197654,
+          23114,
+          323488
+        ]
+      ],
+      "images": 399
+    },
+    "05-26": {
+      "miou": 0.8354710597073639,
+      "iou_soil": 0.9919378124899645,
+      "iou_crop": 0.936437947574514,
+      "iou_weed": 0.5780374190576131,
+      "pixel_accuracy": 0.9922490568721996,
+      "confusion_matrix": [
+        [
+          159693229,
+          360546,
+          95402
+        ],
+        [
+          691391,
+          16731334,
+          30280
+        ],
+        [
+          150602,
+          53446,
+          451690
+        ]
+      ],
+      "images": 170
+    },
+    "06-05": {
+      "miou": 0.9070246149506073,
+      "iou_soil": 0.988236270567709,
+      "iou_crop": 0.9649126966434927,
+      "iou_weed": 0.7679248776406205,
+      "pixel_accuracy": 0.9896077499013817,
+      "confusion_matrix": [
+        [
+          161633607,
+          685817,
+          306077
+        ],
+        [
+          710293,
+          46315134,
+          133283
+        ],
+        [
+          221861,
+          154773,
+          2700083
+        ]
+      ],
+      "images": 203
+    }
+  },
+  "val_1024_official": {
+    "soil": 99.36,
+    "crop": 94.87,
+    "weed": 70.0,
+    "mIoU": 88.08
+  },
+  "size_analysis": {
+    "crop": [
+      {
+        "area_px": "<64",
+        "plants": 47,
+        "detection_rate": 0.23404255319148937,
+        "pixel_recall": 0.22318251143873918,
+        "missed_pixels_to_soil": 0.8946335078534031
+      },
+      {
+        "area_px": "64-256",
+        "plants": 1082,
+        "detection_rate": 0.5600739371534196,
+        "pixel_recall": 0.5139447703534125,
+        "missed_pixels_to_soil": 0.8276852789487318
+      },
+      {
+        "area_px": "256-1k",
+        "plants": 482,
+        "detection_rate": 0.8319502074688797,
+        "pixel_recall": 0.6849903418084147,
+        "missed_pixels_to_soil": 0.7189109130169979
+      },
+      {
+        "area_px": "1k-4k",
+        "plants": 728,
+        "detection_rate": 0.9697802197802198,
+        "pixel_recall": 0.88851028634002,
+        "missed_pixels_to_soil": 0.8250526792400258
+      },
+      {
+        "area_px": ">=4k",
+        "plants": 2628,
+        "detection_rate": 0.997716894977169,
+        "pixel_recall": 0.9732367606389642,
+        "missed_pixels_to_soil": 0.938145811743486
+      }
+    ],
+    "weed": [
+      {
+        "area_px": "<64",
+        "plants": 133,
+        "detection_rate": 0.3082706766917293,
+        "pixel_recall": 0.302158273381295,
+        "missed_pixels_to_soil": 0.9396797543320904
+      },
+      {
+        "area_px": "64-256",
+        "plants": 997,
+        "detection_rate": 0.5727181544633901,
+        "pixel_recall": 0.5344966866104912,
+        "missed_pixels_to_soil": 0.8260673269561782
+      },
+      {
+        "area_px": "256-1k",
+        "plants": 1542,
+        "detection_rate": 0.748378728923476,
+        "pixel_recall": 0.6633036611578228,
+        "missed_pixels_to_soil": 0.7606645139360979
+      },
+      {
+        "area_px": "1k-4k",
+        "plants": 719,
+        "detection_rate": 0.9248956884561892,
+        "pixel_recall": 0.84853139870867,
+        "missed_pixels_to_soil": 0.7678654409052367
+      },
+      {
+        "area_px": ">=4k",
+        "plants": 210,
+        "detection_rate": 0.9523809523809523,
+        "pixel_recall": 0.8918986766832487,
+        "missed_pixels_to_soil": 0.5584286532084723
+      }
+    ]
+  },
+  "error_zones": {
+    "width_px": 5,
+    "zones": {
+      "crop_weed_contact": {
+        "share_of_pixels": 0.0005732546198553372,
+        "error_rate": 0.34749919189742484,
+        "share_of_all_errors": 0.03152854504769158,
+        "share_of_crop_weed_swaps": 0.25873650753763
+      },
+      "plant_soil_edge": {
+        "share_of_pixels": 0.06031320749786851,
+        "error_rate": 0.09404285412733543,
+        "share_of_all_errors": 0.8977197786352301,
+        "share_of_crop_weed_swaps": 0.47083254804235686
+      },
+      "plant_interior": {
+        "share_of_pixels": 0.06990414826981144,
+        "error_rate": 0.004315673853860365,
+        "share_of_all_errors": 0.047747884257625425,
+        "share_of_crop_weed_swaps": 0.2704309444200132
+      },
+      "soil_far": {
+        "share_of_pixels": 0.8692093896124647,
+        "error_rate": 0.00016721393097154078,
+        "share_of_all_errors": 0.023003792059452924,
+        "share_of_crop_weed_swaps": 0.0
+      }
+    }
+  },
+  "worst_weed_images": [
+    {
+      "image": "05-15_00164_P0030953.png",
+      "weed_iou": 0.0
+    },
+    {
+      "image": "05-15_00184_P0030953.png",
+      "weed_iou": 0.0
+    },
+    {
+      "image": "05-15_00185_P0030953.png",
+      "weed_iou": 0.0
+    },
+    {
+      "image": "05-15_00274_P0030792.png",
+      "weed_iou": 0.0
+    },
+    {
+      "image": "05-15_00275_P0030792.png",
+      "weed_iou": 0.0
+    },
+    {
+      "image": "05-15_00179_P0030943.png",
+      "weed_iou": 0.047388781431334626
+    }
+  ],
+  "test_submission": {
+    "images": 693,
+    "validator_passed": true
+  }
+}

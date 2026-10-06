@@ -23,3 +23,11 @@ Thumbs.db
 
 # Colab checkpoints (hosted on Google Drive)
 *.pt
+
+# Local work files (not pushed)
+README_original.md
+Evaluation/submission.zip
+phenoBench_00685.png
+training_new_run.ipynb
+training_new_new_run.ipynb
+PROJECT_GUIDE.html

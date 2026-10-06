@@ -6,14 +6,16 @@ A U-Net semantic segmentation model trained on the [PhenoBench](https://www.phen
 
 Precision agriculture needs to know exactly where crops and weeds are in a field, so weeds can be treated selectively instead of spraying the whole field. This project trains a deep learning model to find them in drone images. Given a 1024x1024 UAV image of a sugar beet field, it labels every pixel as soil, crop or weed.
 
-The whole pipeline runs in one Google Colab notebook (`notebooks/training.ipynb`):
+The project has two Google Colab notebooks:
 
-1. **Data** — downloads PhenoBench, merges its five labels into soil / crop / weed, and analyses the class imbalance.
-2. **Training** — trains a U-Net with an ImageNet-pretrained ResNet34 encoder for 40 epochs. It uses augmentation (flips, rotations, brightness and colour changes) and a Dice + cross-entropy loss, to cope with weeds covering only ~0.5% of pixels.
-3. **Evaluation** — confusion matrix, per-class IoU, a grid of predictions, and the worst-performing images.
-4. **Inference** — upload any field image and get a colour-coded soil / crop / weed mask with crop and weed coverage percentages.
+1. **`notebooks/training.ipynb`** — the full training pipeline:
+   - **Data** — downloads PhenoBench, merges its five labels into soil / crop / weed, and analyses the class imbalance.
+   - **Training** — trains a U-Net with an ImageNet-pretrained ResNet34 encoder for 40 epochs. It uses augmentation (flips, rotations, brightness and colour changes) and a Dice + cross-entropy loss, to cope with weeds covering only ~0.5% of pixels.
+   - **Evaluation** — confusion matrix, per-class IoU, a grid of predictions, and the worst-performing images.
+   - **Inference** — upload any field image and get a colour-coded soil / crop / weed mask with crop and weed coverage percentages.
+2. **`notebooks/evaluation.ipynb`** — evaluates the trained model without retraining. It scores at PhenoBench's native 1024x1024 resolution, cross-checks the numbers with PhenoBench's official evaluation code, and measures failures by plant size, growth stage and location. It also builds the submission file for the official test server.
 
-On the PhenoBench validation split, the model reaches **0.871 mIoU** (crop IoU 0.94, weed IoU 0.68).
+**Headline result:** **84.72 mIoU on the official PhenoBench test set** (hidden labels, scored by the benchmark server), with crop IoU 93.33 and weed IoU 61.57.
 
 ## Objective
 
@@ -31,12 +33,14 @@ Develop a deep learning pipeline for automated crop/weed segmentation from UAV-c
 | Input Size | 512 x 512 | Resized from 1024x1024 for GPU memory efficiency |
 | Classes | 3 (Soil, Crop, Weed) | PhenoBench's 5 labels merged: partial crop → crop, partial weed → weed (the official benchmark rule) |
 
+The model has 24.4 million parameters (21.3M in the encoder, 3.2M in the decoder).
+
 ## Dataset
 
 **PhenoBench v1.1.0** — high-resolution UAV imagery of sugar beet fields ([Weyler et al., 2024](https://arxiv.org/abs/2306.04557)):
-- 1,407 training and 772 validation images (1024x1024 px); the 693 test images have hidden labels and are scored by the benchmark server
-- Captured from ~21 m altitude, giving a ground sampling distance of ~1 mm/px
-- Images come from three dates in 2020 (05-15, 05-26, 06-05), i.e. three growth stages; the date is the filename prefix
+- 1,407 training and 772 validation images (1024x1024 px), from one field recorded on three dates in 2020 (05-15, 05-26, 06-05), i.e. three growth stages. The date is the filename prefix.
+- 693 test images with hidden labels, scored by the benchmark server. The test set contains the 2020 field and, in addition, **a different field recorded on four dates in 2021** that never appears in training or validation.
+- Captured from ~21 m altitude, giving a ground sampling distance of ~1 mm/px.
 
 ### Class Distribution (severe imbalance)
 
@@ -53,48 +57,125 @@ Imbalance is strongest at the earliest growth stage:
 | 05-26 | 88.1 / 11.5 / 0.36% | 245 : 1 | 89.8 / 9.8 / 0.37% | 244 : 1 |
 | 06-05 | 73.3 / 25.6 / 1.11% | 66 : 1 | 76.4 / 22.2 / 1.45% | 53 : 1 |
 
-The EDA cell in the notebook samples the first 200 training files in filename order. These are all from 05-15, so its output (96.4% / 3.3% / 0.2%, 448:1) describes only the earliest growth stage.
+The EDA cell in the training notebook samples the first 200 training files in filename order. These are all from 05-15, so its output (96.4% / 3.3% / 0.2%, 448:1) describes only the earliest growth stage.
 
 ## Results
 
-Trained for **40 epochs** on Google Colab (T4 GPU). All results are on the PhenoBench **validation** split, with predictions and labels at 512x512.
+Trained for **40 epochs** on Google Colab (T4 GPU). The model takes a 512x512 input; for the 1024x1024 results, its output is upsampled to the original size and compared with the original labels.
 
-### Quantitative Performance
+### Official test set
 
-| Metric | Score |
-|--------|-------|
-| **Mean IoU (mIoU)** | **0.871** |
-| Soil IoU | 0.993 |
-| Crop IoU | 0.941 |
-| Weed IoU | 0.680 |
-| Pixel accuracy | 0.993 |
-| Best validation loss (Dice + CE) | 0.144 |
+Scored by the PhenoBench benchmark server ([Codabench](https://www.codabench.org/competitions/14019), submission 965250, on the public leaderboard). The test labels are hidden, so the model was never trained, tuned or selected on this data. Raw output: [`Evaluation/scoring_result.zip`](Evaluation/scoring_result.zip).
+
+| Test subset | mIoU | Soil | Crop | Weed |
+|-------------|------|------|------|------|
+| **All 693 images** | **84.72** | 99.25 | 93.33 | 61.57 |
+| 2020 field (same field as training) | 85.84 | 99.33 | 93.46 | 64.73 |
+| 2021 field (unseen) | 75.83 | 98.30 | 92.77 | 36.43 |
+
+By recording date:
+
+| Date | Field | mIoU | Soil | Crop | Weed |
+|------|-------|------|------|------|------|
+| 2020-05-15 | 2020 | 78.06 | 99.63 | 90.29 | 44.26 |
+| 2020-05-26 | 2020 | 84.29 | 98.71 | 93.60 | 60.56 |
+| 2020-06-05 | 2020 | 91.00 | 98.72 | 96.32 | 77.97 |
+| 2021-05-20 | 2021 (unseen) | 68.15 | 99.54 | 69.86 | 35.04 |
+| 2021-05-28 | 2021 (unseen) | 85.93 | 99.34 | 90.19 | 68.27 |
+| 2021-06-01 | 2021 (unseen) | 71.97 | 98.60 | 87.43 | 29.90 |
+| 2021-06-10 | 2021 (unseen) | 75.32 | 97.28 | 93.90 | 34.79 |
+
+For context, the baselines reported in the PhenoBench paper on the same test set:
+
+| Model | mIoU | Soil | Crop | Weed |
+|-------|------|------|------|------|
+| ERFNet (PhenoBench paper) | 85.98 | 99.28 | 94.30 | 64.37 |
+| DeepLabV3+ (PhenoBench paper) | 85.97 | 99.25 | 94.07 | 64.59 |
+| **This project (U-Net + ResNet34)** | **84.72** | **99.25** | **93.33** | **61.57** |
+
+This model scores about 1.3 mIoU points below the paper's baselines, mainly on the weed class.
+
+### Validation set
+
+From [`notebooks/evaluation.ipynb`](notebooks/evaluation.ipynb), using the same checkpoint. The validation set was also used to choose the checkpoint, so these numbers are somewhat optimistic compared with the test set.
+
+| Resolution | mIoU | Soil | Crop | Weed | Pixel accuracy |
+|------------|------|------|------|------|----------------|
+| **1024x1024 (official setting)** | **88.08** | 99.36 | 94.87 | 70.00 | 99.37 |
+| 512x512 (as in `training.ipynb`) | 87.14 | 99.26 | 94.14 | 68.03 | 99.28 |
+
+PhenoBench's official evaluation code (`evaluate_semantics` from the [phenobench](https://github.com/PRBonn/phenobench) package), run on the same 1024x1024 predictions, gives identical numbers: soil 99.36, crop 94.87, weed 70.00, mIoU 88.08.
+
+By growth stage (1024x1024):
+
+| Date | Images | mIoU | Soil | Crop | Weed |
+|------|--------|------|------|------|------|
+| 05-15 | 399 | 79.60 | 99.64 | 90.65 | 48.50 |
+| 05-26 | 170 | 83.55 | 99.19 | 93.64 | 57.80 |
+| 06-05 | 203 | 90.70 | 98.82 | 96.49 | 76.79 |
+
+All validation numbers are in [`Evaluation/eval_results.json`](Evaluation/eval_results.json).
 
 ### How mIoU is computed
 
-The notebook reports three mIoU values. They differ only in how IoU is averaged:
+All mIoU values above use the PhenoBench definition: IoU per class from one confusion matrix over every pixel of the split, then averaged over soil, crop and weed. `training.ipynb` also logs two other averages:
 
-| Definition | Value | Where in the notebook |
+| Definition | Value (validation, 512x512) | Where |
 |------------|-------|-------|
-| **Dataset-level** — IoU from one confusion matrix over every validation pixel. This is the PhenoBench benchmark's definition. | **0.871** | Section 7, per-class IoU bar chart |
-| Batch-averaged — IoU per validation batch, averaged over 97 batches. Used to select the checkpoint (epoch 39). | 0.822 | Training log |
-| Per-image average | 0.794 | Failure analysis |
+| **Dataset-level** (PhenoBench definition) | **0.871** | `training.ipynb`, per-class IoU bar chart |
+| Batch-averaged — IoU per validation batch, averaged over 97 batches. Used to select the checkpoint (epoch 39). | 0.822 | `training.ipynb`, training log |
+| Per-image average | 0.794 | `training.ipynb`, failure analysis |
 
-Batch and per-image averaging penalise the weed class: when a batch or image has only a few weed pixels, a handful of errors drives its weed IoU toward zero. That's why weed IoU is 0.68 at dataset level but 0.55 in the batch-averaged training log.
+Batch and per-image averaging penalise the weed class: when a batch or image has only a few weed pixels, a handful of errors drives its weed IoU toward zero.
+
+### Failure analysis
+
+Measured on the validation set at 1024x1024 in `evaluation.ipynb`.
+
+**Small plants are missed.** Each complete plant in PhenoBench's `plant_instances` counts as detected if at least 50% of its pixels are predicted as its class. Partial plants cut by the image border are excluded. At ~1 mm/px, the plant area in pixels is roughly its area in mm².
+
+| Plant area (px) | Weeds | Weeds detected | Crops | Crops detected |
+|-----------------|-------|----------------|-------|----------------|
+| < 64 | 133 | 30.8% | 47 | 23.4% |
+| 64–256 | 997 | 57.3% | 1,082 | 56.0% |
+| 256–1k | 1,542 | 74.8% | 482 | 83.2% |
+| 1k–4k | 719 | 92.5% | 728 | 97.0% |
+| ≥ 4k | 210 | 95.2% | 2,628 | 99.8% |
+
+![Detection rate by plant size](Evaluation/detection_by_size.png)
+
+**Most errors are at plant outlines.** Each pixel is assigned to a zone based on the ground truth (zone width 5 px ≈ 5 mm):
+
+| Zone | Share of pixels | Error rate | Share of all errors | Share of crop↔weed swaps |
+|------|-----------------|------------|---------------------|--------------------------|
+| Crop–weed contact (near both a crop and a weed) | 0.06% | 34.75% | 3.15% | 25.87% |
+| Plant–soil edge | 6.03% | 9.40% | 89.77% | 47.08% |
+| Plant interior | 6.99% | 0.43% | 4.77% | 27.04% |
+| Open soil | 86.92% | 0.02% | 2.30% | 0.00% |
+
+**Weeds are mostly confused with soil, not with crops.** Of the weed pixels the model missed, 71% were predicted as soil. Of the pixels wrongly predicted as weed, 71% were soil.
+
+**The worst images are from the earliest growth stage.** The six validation images with the lowest weed IoU (0.00–0.05) are all from 05-15. They are nearly bare soil, and their tiny weed seedlings are missed entirely. See [`Evaluation/worst_weed_images.png`](Evaluation/worst_weed_images.png).
 
 ### Key Findings
-- Crop is segmented reliably (IoU 0.94). Weed is the hard class (IoU 0.68), consistent with it covering only ~0.5% of pixels.
-- Most weed errors are **weed↔soil**, not weed↔crop. Of weed pixels the model missed, 73% were predicted as soil. Of pixels wrongly predicted as weed, 73% were soil. Crop↔weed confusion is ~50–58k pixels in each direction, against ~138–156k for weed↔soil.
-- The six worst validation images (by per-image mIoU) all come from the earliest growth stage (05-15). They are almost bare soil with a few small seedlings, so a handful of misclassified pixels drives per-image IoU down.
+- Crop is segmented reliably on both test fields (IoU 93.5 on the 2020 field, 92.8 on the unseen 2021 field). Weed is the hard class.
+- **Weed segmentation does not transfer well to a new field.** Weed IoU falls from 64.73 on the 2020 test field to 36.43 on the unseen 2021 field, while crop IoU barely changes.
+- **Small plants are the main weakness.** Detection rises from about 31% for weeds under 64 px to 95% for weeds over 4,000 px. Accordingly, early growth stages score lowest on both validation and test.
+- Errors concentrate on plant outlines: plant–soil edges are 6% of pixels but hold 90% of errors. Crop–weed contact zones have a high error rate (35%) but are rare, holding 3% of errors.
 
 ## Repository Structure
 
 ```
 CropSeg/
 ├── notebooks/
-│   └── training.ipynb    # Complete ML pipeline (EDA → Training → Evaluation → Inference)
+│   ├── training.ipynb            # Training pipeline (EDA → Training → Evaluation → Inference)
+│   └── evaluation.ipynb          # Evaluation of the trained model at 1024x1024, failure analysis, test submission
+├── Evaluation/
+│   ├── eval_results.json         # All validation results from evaluation.ipynb
+│   ├── detection_by_size.png     # Detection rate by plant size
+│   ├── worst_weed_images.png     # Worst validation images with error maps
+│   └── scoring_result.zip        # Official test-set scores from the PhenoBench benchmark server
 ├── README.md
-├── README_original.md    # Earlier README, kept for reference (contains uncorrected figures)
 └── .gitignore
 ```
 
@@ -112,7 +193,7 @@ The `checkpoints` folder contains:
 
 ## Setup & Usage
 
-### Option 1: Run on Google Colab (Recommended)
+### Option 1: Train on Google Colab
 
 1. Open `notebooks/training.ipynb` in Google Colab
 2. The notebook automatically:
@@ -125,7 +206,13 @@ The `checkpoints` folder contains:
    - Don't run the training cell while `best_model.pt` is present. It resumes from that checkpoint, trains another epoch, and can overwrite the file.
 4. Use the final "Inference on Unseen Images" cell to predict on new images
 
-### Option 2: Local Inference Only
+### Option 2: Full evaluation on Google Colab (no training)
+
+1. Put `best_model.pt` in `MyDrive/CropSeg/checkpoints/` and PhenoBench in `MyDrive/CropSeg/data/phenobench/` (the training notebook downloads it there).
+2. Open `notebooks/evaluation.ipynb` in Colab, select a T4 GPU runtime, and run all cells.
+3. Results, figures and `submission.zip` (for the [PhenoBench benchmark server](https://www.codabench.org/competitions/14019)) are saved to `MyDrive/CropSeg/evaluation/`.
+
+### Option 3: Local Inference Only
 
 ```bash
 pip install torch torchvision segmentation-models-pytorch opencv-python numpy
@@ -167,6 +254,7 @@ mask = cv2.resize(mask, (w, h), interpolation=cv2.INTER_NEAREST)
 - **Albumentations** — Image augmentation
 - **OpenCV** — Image I/O and preprocessing
 - **NumPy, scikit-learn, Matplotlib** — Metrics, confusion matrix, plots
+- **PhenoBench development kit, torchmetrics** — Official evaluation code and submission validator
 - **Google Colab** — T4 GPU training environment
 - **PhenoBench** — UAV crop/weed segmentation benchmark dataset
 
