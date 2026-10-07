@@ -31,3 +31,6 @@ phenoBench_00685.png
 training_new_run.ipynb
 training_new_new_run.ipynb
 PROJECT_GUIDE.html
+
+report/figures/*
+report/cropseg_report.tex

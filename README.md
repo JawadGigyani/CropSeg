@@ -90,15 +90,21 @@ By recording date:
 | 2021-06-01 | 2021 (unseen) | 71.97 | 98.60 | 87.43 | 29.90 |
 | 2021-06-10 | 2021 (unseen) | 75.32 | 97.28 | 93.90 | 34.79 |
 
-For context, the baselines reported in the PhenoBench paper on the same test set:
+For context, the baselines reported in the PhenoBench paper on the same test set ([published TPAMI version](https://www.ipb.uni-bonn.de/pdfs/weyler2024tpami.pdf): Table 3 for all images, supplementary Table 9 for each field):
 
-| Model | mIoU | Soil | Crop | Weed |
-|-------|------|------|------|------|
-| ERFNet (PhenoBench paper) | 85.98 | 99.28 | 94.30 | 64.37 |
-| DeepLabV3+ (PhenoBench paper) | 85.97 | 99.25 | 94.07 | 64.59 |
-| **This project (U-Net + ResNet34)** | **84.72** | **99.25** | **93.33** | **61.57** |
+| Test subset | Model | mIoU | Soil | Crop | Weed |
+|-------------|-------|------|------|------|------|
+| All images | ERFNet (PhenoBench paper) | 85.98 | 99.28 | 94.30 | 64.37 |
+| | DeepLabV3+ (PhenoBench paper) | 85.97 | 99.25 | 94.07 | 64.59 |
+| | **This project (U-Net + ResNet34)** | **84.72** | **99.25** | **93.33** | **61.57** |
+| 2020 field (same field as training) | ERFNet | 86.70 | 99.36 | 94.46 | 66.28 |
+| | DeepLabV3+ | 86.56 | 99.33 | 94.25 | 66.08 |
+| | **This project** | **85.84** | **99.33** | **93.46** | **64.73** |
+| 2021 field (unseen) | ERFNet | 80.11 | 98.37 | 93.61 | 48.35 |
+| | DeepLabV3+ | 81.38 | 98.26 | 93.28 | 52.62 |
+| | **This project** | **75.83** | **98.30** | **92.77** | **36.43** |
 
-This model scores about 1.3 mIoU points below the paper's baselines, mainly on the weed class.
+This model scores about 1.3 mIoU points below the paper's baselines overall, mainly on the weed class. On the 2020 field it is within 0.9 points of them; on the unseen 2021 field the gap grows to 4.3–5.6 points. All three models lose weed IoU on the new field, but this one loses the most (28 points, against 13–18 points for the baselines).
 
 ### Validation set
 
@@ -139,13 +145,15 @@ Measured on the validation set at 1024x1024 in `evaluation.ipynb`.
 
 **Small plants are missed.** Each complete plant in PhenoBench's `plant_instances` counts as detected if at least 50% of its pixels are predicted as its class. Partial plants cut by the image border are excluded. At ~1 mm/px, the plant area in pixels is roughly its area in mm².
 
-| Plant area (px) | Weeds | Weeds detected | Crops | Crops detected |
-|-----------------|-------|----------------|-------|----------------|
+| Plant area (px) | Weed instances | Weeds detected | Crop instances | Crops detected |
+|-----------------|----------------|----------------|----------------|----------------|
 | < 64 | 133 | 30.8% | 47 | 23.4% |
 | 64–256 | 997 | 57.3% | 1,082 | 56.0% |
 | 256–1k | 1,542 | 74.8% | 482 | 83.2% |
 | 1k–4k | 719 | 92.5% | 728 | 97.0% |
 | ≥ 4k | 210 | 95.2% | 2,628 | 99.8% |
+
+Counts are plant instances per image. Neighbouring PhenoBench images overlap by 50%, so the same plant can be counted in more than one image.
 
 ![Detection rate by plant size](Evaluation/detection_by_size.png)
 
@@ -160,12 +168,13 @@ Measured on the validation set at 1024x1024 in `evaluation.ipynb`.
 
 **Weeds are mostly confused with soil, not with crops.** Of the weed pixels the model missed, 71% were predicted as soil. Of the pixels wrongly predicted as weed, 71% were soil.
 
-**The worst images are from the earliest growth stage.** The six validation images with the lowest weed IoU (0.00–0.05) are all from 05-15. They are nearly bare soil, and their tiny weed seedlings are missed entirely. See [`Evaluation/worst_weed_images.png`](Evaluation/worst_weed_images.png).
+**The worst images are from the earliest growth stage.** Among validation images with at least 500 weed pixels, the six with the lowest weed IoU (0.00–0.05) are all from 05-15. They are nearly bare soil, and their tiny weed seedlings are either missed (predicted as soil) or predicted as crop. See [`Evaluation/worst_weed_images.png`](Evaluation/worst_weed_images.png).
 
 ### Key Findings
-- Crop is segmented reliably on both test fields (IoU 93.5 on the 2020 field, 92.8 on the unseen 2021 field). Weed is the hard class.
-- **Weed segmentation does not transfer well to a new field.** Weed IoU falls from 64.73 on the 2020 test field to 36.43 on the unseen 2021 field, while crop IoU barely changes.
-- **Small plants are the main weakness.** Detection rises from about 31% for weeds under 64 px to 95% for weeds over 4,000 px. Accordingly, early growth stages score lowest on both validation and test.
+- Crop is segmented reliably on both test fields overall (IoU 93.5 on the 2020 field, 92.8 on the unseen 2021 field), although on the earliest 2021 date it drops to 69.9, where the baselines keep about 90. Weed is the hard class.
+- The model has two main weaknesses: a new field and small plants.
+- **Weak on a new field.** Weed IoU drops by 44%, from 64.73 on the 2020 test field to 36.43 on the unseen 2021 field. The paper's baselines also lose weed IoU there, but less (13–18 points, against 28).
+- **Weak on small plants.** Detection rises from about 31% for weed instances under 64 px to 95% for those over 4,000 px. Accordingly, early growth stages score lowest on both validation and test.
 - Errors concentrate on plant outlines: plant–soil edges are 6% of pixels but hold 90% of errors. Crop–weed contact zones have a high error rate (35%) but are rare, holding 3% of errors.
 
 ## Repository Structure
@@ -183,9 +192,7 @@ CropSeg/
 │   ├── worst_weed_images.png     # Worst validation images with error maps
 │   └── scoring_result.zip        # Official test-set scores from the PhenoBench benchmark server
 ├── report/
-│   ├── cropseg_report.pdf        # Technical report
-│   ├── cropseg_report.tex        # LaTeX source of the report
-│   └── figures/                  # Report figures, plotted from the notebook outputs
+│   └── cropseg_report.pdf        # Technical report
 ├── README.md
 └── .gitignore
 ```
