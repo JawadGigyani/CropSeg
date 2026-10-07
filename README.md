@@ -6,7 +6,7 @@ A U-Net semantic segmentation model trained on the [PhenoBench](https://www.phen
 
 Precision agriculture needs to know exactly where crops and weeds are in a field, so weeds can be treated selectively instead of spraying the whole field. This project trains a deep learning model to find them in drone images. Given a 1024x1024 UAV image of a sugar beet field, it labels every pixel as soil, crop or weed.
 
-The project has two Google Colab notebooks:
+The project has three Google Colab notebooks:
 
 1. **`notebooks/training.ipynb`** — the full training pipeline:
    - **Data** — downloads PhenoBench, merges its five labels into soil / crop / weed, and analyses the class imbalance.
@@ -14,8 +14,11 @@ The project has two Google Colab notebooks:
    - **Evaluation** — confusion matrix, per-class IoU, a grid of predictions, and the worst-performing images.
    - **Inference** — upload any field image and get a colour-coded soil / crop / weed mask with crop and weed coverage percentages.
 2. **`notebooks/evaluation.ipynb`** — evaluates the trained model without retraining. It scores at PhenoBench's native 1024x1024 resolution, cross-checks the numbers with PhenoBench's official evaluation code, and measures failures by plant size, growth stage and location. It also builds the submission file for the official test server.
+3. **`notebooks/dataset_and_model_stats.ipynb`** — computes the dataset statistics (images per date, class distribution over all masks) and the model facts (what is stored in the checkpoint, number of parameters).
 
 **Headline result:** **84.72 mIoU on the official PhenoBench test set** (hidden labels, scored by the benchmark server), with crop IoU 93.33 and weed IoU 61.57.
+
+**Technical report:** [`report/cropseg_report.pdf`](report/cropseg_report.pdf) describes the method, results and failure analysis in detail.
 
 ## Objective
 
@@ -33,7 +36,7 @@ Develop a deep learning pipeline for automated crop/weed segmentation from UAV-c
 | Input Size | 512 x 512 | Resized from 1024x1024 for GPU memory efficiency |
 | Classes | 3 (Soil, Crop, Weed) | PhenoBench's 5 labels merged: partial crop → crop, partial weed → weed (the official benchmark rule) |
 
-The model has 24.4 million parameters (21.3M in the encoder, 3.2M in the decoder).
+The model has 24.4 million parameters (21.3M in the encoder, 3.2M in the decoder), counted in `notebooks/dataset_and_model_stats.ipynb`.
 
 ## Dataset
 
@@ -56,6 +59,8 @@ Imbalance is strongest at the earliest growth stage:
 | 05-15 | 96.7 / 3.1 / 0.19% | 517 : 1 | 96.8 / 3.0 / 0.13% | 744 : 1 |
 | 05-26 | 88.1 / 11.5 / 0.36% | 245 : 1 | 89.8 / 9.8 / 0.37% | 244 : 1 |
 | 06-05 | 73.3 / 25.6 / 1.11% | 66 : 1 | 76.4 / 22.2 / 1.45% | 53 : 1 |
+
+Both tables are computed over all label masks in `notebooks/dataset_and_model_stats.ipynb` (numbers in [`Evaluation/dataset_and_model_stats.json`](Evaluation/dataset_and_model_stats.json)).
 
 The EDA cell in the training notebook samples the first 200 training files in filename order. These are all from 05-15, so its output (96.4% / 3.3% / 0.2%, 448:1) describes only the earliest growth stage.
 
@@ -169,12 +174,18 @@ Measured on the validation set at 1024x1024 in `evaluation.ipynb`.
 CropSeg/
 ├── notebooks/
 │   ├── training.ipynb            # Training pipeline (EDA → Training → Evaluation → Inference)
-│   └── evaluation.ipynb          # Evaluation of the trained model at 1024x1024, failure analysis, test submission
+│   ├── evaluation.ipynb          # Evaluation of the trained model at 1024x1024, failure analysis, test submission
+│   └── dataset_and_model_stats.ipynb  # Class distribution, checkpoint details, parameter count
 ├── Evaluation/
 │   ├── eval_results.json         # All validation results from evaluation.ipynb
+│   ├── dataset_and_model_stats.json   # Results from dataset_and_model_stats.ipynb
 │   ├── detection_by_size.png     # Detection rate by plant size
 │   ├── worst_weed_images.png     # Worst validation images with error maps
 │   └── scoring_result.zip        # Official test-set scores from the PhenoBench benchmark server
+├── report/
+│   ├── cropseg_report.pdf        # Technical report
+│   ├── cropseg_report.tex        # LaTeX source of the report
+│   └── figures/                  # Report figures, plotted from the notebook outputs
 ├── README.md
 └── .gitignore
 ```
@@ -186,7 +197,7 @@ The trained model checkpoint (~280 MB) is hosted on Google Drive:
 **[Download Trained Weights](https://drive.google.com/drive/folders/1fGvRF82Xw8xv0RZ5-UVTLnWPkJk7pJnB?usp=sharing)**
 
 The `checkpoints` folder contains:
-- `best_model.pt` — Best checkpoint (highest batch-averaged validation mIoU, epoch 39). It stores `epoch` (0-based, 38), `val_loss` (0.1437), `val_miou` (0.8225) and `config`.
+- `best_model.pt` — Best checkpoint (highest batch-averaged validation mIoU, epoch 39). It stores `epoch` (0-based, 38), `val_loss` (0.1437), `val_miou` (0.8225) and `config` (printed in `notebooks/dataset_and_model_stats.ipynb`).
 - `epoch_10.pt` through `epoch_40.pt` — Intermediate checkpoints
 - `training_curves.png` — Loss/IoU plots
 - `prediction_grid.png` — Visual results
@@ -211,6 +222,7 @@ The `checkpoints` folder contains:
 1. Put `best_model.pt` in `MyDrive/CropSeg/checkpoints/` and PhenoBench in `MyDrive/CropSeg/data/phenobench/` (the training notebook downloads it there).
 2. Open `notebooks/evaluation.ipynb` in Colab, select a T4 GPU runtime, and run all cells.
 3. Results, figures and `submission.zip` (for the [PhenoBench benchmark server](https://www.codabench.org/competitions/14019)) are saved to `MyDrive/CropSeg/evaluation/`.
+4. Optionally, run `notebooks/dataset_and_model_stats.ipynb` the same way (CPU runtime is enough) to reproduce the dataset statistics and the parameter count.
 
 ### Option 3: Local Inference Only
 
